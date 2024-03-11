@@ -5,17 +5,17 @@ import (
 	"fmt"
 )
 
-// func createProduct(product *Product) error {
-// 	var id int
-// 	err := dbConnect.QueryRow(`INSERT INTO products(name, price) VALUES($1, $2) RETURNING id;`, product.Name, product.Price).Scan(&id)
+func createProduct(product *Product) error {
+	var id int
+	err := dbConnect.QueryRow(`INSERT INTO products(name, price) VALUES($1, $2) RETURNING id;`, product.Name, product.Price).Scan(&id)
 
-// 	if err != nil {
-// 		return err
-// 	}
+	if err != nil {
+		return err
+	}
 
-// 	fmt.Printf("New product ID is %d\n", id)
-// 	return nil
-// }
+	fmt.Printf("New product ID is %d\n", id)
+	return nil
+}
 
 func getProductById(id int) (Product, error) {
 	var p Product
@@ -119,7 +119,7 @@ func formatSupplierName(s sql.NullString) string {
 	return "-"
 }
 
-func addProductAndSupplier(product Product, supplier Supplier) error {
+func addProductAndSupplier(data *ProductWithSupplier) error {
 	// Start a transaction
 	tx, err := dbConnect.Begin()
 	if err != nil {
@@ -136,13 +136,13 @@ func addProductAndSupplier(product Product, supplier Supplier) error {
 
 	// Insert into the supplier table and retrieve the inserted ID
 	var supplierID int64
-	err = tx.QueryRow("INSERT INTO suppliers (name) VALUES ($1) RETURNING id", supplier.Name).Scan(&supplierID)
+	err = tx.QueryRow("INSERT INTO suppliers (name) VALUES ($1) RETURNING id", data.SupplierName).Scan(&supplierID)
 	if err != nil {
 		return err
 	}
 
 	// Insert into the product table
-	_, err = tx.Exec("INSERT INTO products (name, price, supplier_id) VALUES ($1, $2, $3)", product.Name, product.Price, supplierID)
+	_, err = tx.Exec("INSERT INTO products (name, price, supplier_id) VALUES ($1, $2, $3)", data.ProductName, data.Price, supplierID)
 	if err != nil {
 		return err
 	}

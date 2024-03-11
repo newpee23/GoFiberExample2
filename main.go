@@ -25,21 +25,16 @@ type Product struct {
 }
 
 type ProductWithSupplier struct {
-	ProductID    int
-	ProductName  string
-	Price        int
-	SupplierName string
+	ProductID    int    `json:"productID"`
+	ProductName  string `json:"productName"`
+	Price        int    `json:"price"`
+	SupplierName string `json:"supplierName"`
 }
 
 type AddProductWithSupplier struct {
-	ProductName  string
-	Price        int
-	SupplierName string
-}
-
-type Supplier struct {
-	// define your supplier fields
-	Name string
+	ProductName  string `json:"productName"`
+	Price        int    `json:"price"`
+	SupplierName string `json:"supplierName"`
 }
 
 var dbConnect *sql.DB
@@ -68,76 +63,15 @@ func main() {
 
 	app := fiber.New()
 
+	app.Get("/productsSupplier", getAllProductAndSupplierHandler)
+	app.Get("/products", getAllProductHandler)
 	app.Get("/product/:id", getProductHandler)
+	app.Post("/product", createProductHandler)
+	app.Post("/productSupplier", createProductAndSupplierHandler)
+	app.Put("/product/:id", updateProductHandler)
+	app.Delete("/product/:id", deleteProductHandler)
 
 	app.Listen(":8080")
-
-	// productAdd := Product{
-	// 	Name:  "Example Product",
-	// 	Price: 100,
-	// }
-
-	// supplier := Supplier{
-	// 	Name: "Example Supplier",
-	// }
-
-	// err = addProductAndSupplier(productAdd, supplier)
-	// if err != nil {
-	// 	log.Fatalf("Error adding product and supplier: %v", err)
-	// } else {
-	// 	fmt.Println("Product and supplier added successfully")
-	// }
-
-	// err = createProduct(&Product{Name: "Go Product3", Price: 333})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// Retrieve all products
-	// productAll, err := getProducts()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println("Products:")
-	// for _, p := range productAll {
-	// 	fmt.Printf("ID: %d, Name: %s, Price: %d\n", p.ID, p.Name, p.Price)
-	// }
-
-	// getProductById
-	// product, err := getProductById(3)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Printf("Product with ID %d: %+v\n", product.ID, product)
-
-	// update ProductById
-	// productUpdate, err := updateProduct(3, &Product{Name: "Go update1", Price: 123})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println("Update product SuccessFul !", productUpdate)
-
-	// delete productById
-	// err = deleteProduct(3)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Printf("Delete product SuccessFul !")
-
-	// Join Data getProductsAndSuppliers
-	// ProductsAndSuppliers, err := getProductsAndSuppliers()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println("ProductsAndSuppliers:")
-	// for _, p := range ProductsAndSuppliers {
-	// 	fmt.Printf("ID: %d, Name: %s, Price: %d, SupplierName: %s\n", p.ProductID, p.ProductName, p.Price, p.SupplierName)
-	// }
 }
 
 func getProductHandler(c *fiber.Ctx) error {
@@ -149,5 +83,83 @@ func getProductHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
+	return c.JSON(product)
+}
+
+func deleteProductHandler(c *fiber.Ctx) error {
+	productId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	err = deleteProduct(productId)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(fiber.Map{"message": fmt.Sprintf("Deleted product with ID: %d", productId)})
+}
+
+func getAllProductHandler(c *fiber.Ctx) error {
+	product, err := getProducts()
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.JSON(product)
+}
+
+func getAllProductAndSupplierHandler(c *fiber.Ctx) error {
+	products, err := getProductsAndSuppliers()
+	if err != nil {
+		// return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.JSON(products)
+}
+
+func createProductHandler(c *fiber.Ctx) error {
+	p := new(Product)
+	if err := c.BodyParser(p); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	err := createProduct(p)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(p)
+}
+
+func createProductAndSupplierHandler(c *fiber.Ctx) error {
+	p := new(ProductWithSupplier)
+	if err := c.BodyParser(p); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	err := addProductAndSupplier(p)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(p)
+}
+
+func updateProductHandler(c *fiber.Ctx) error {
+	productId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	p := new(Product)
+
+	if err := c.BodyParser(p); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	product, err := updateProduct(productId, p)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
 	return c.JSON(product)
 }
